@@ -1,0 +1,77 @@
+.zr-core-search
+    display: flex
+    flex-direction: column
+    min-height: 360px
+
+    .zr-core-search--input
+        border-bottom: 1px var(--zr-border-co) solid
+
+        input
+            background: var(--zr-box-bg)
+            box-shadow: none
+            color: var(--zr-text-co)
+            font-size: 13px
+
+            &:focus
+                box-shadow: none
+
+    .zr-core-search--meta
+        align-items: center
+        border-bottom: 1px var(--zr-border-co) solid
+        color: var(--zr-auxiliary)
+        display: flex
+        font-size: var(--zr-text-small)
+        gap: 8px
+        min-height: 30px
+        padding: 4px 10px
+
+    .zr-core-search--loading
+        align-items: center
+        color: var(--zr-auxiliary)
+        display: flex
+        gap: 8px
+        padding: 14px
+
+    .zr-core-search--results
+        background: unset
+        max-height: 70vh
+        overflow-y: auto
+        padding: 0px
+
+        &::-webkit-scrollbar
+            width: 0px
+
+    .zr-core-search--result
+        padding: 5px 10px
+
+        .zr-library-item--contents
+            white-space: normal
+
+        .zr-library-item--title
+            display: block
+            font-weight: 500
+
+        .zr-details
+            display: flex
+            flex-wrap: wrap
+            gap: 8px
+            margin-top: 2px
+
+        .zr-core-search--actions
+            align-items: center
+            display: flex
+            flex-wrap: wrap
+            gap: 4px
+            margin-top: 6px
+
+        .zr-library-item--key
+            flex: 0 0 auto
+            font-size: var(--zr-text-small)
+            padding: 0px 6px
+            text-align: right
+
+        &[data-in-graph="true"] .zr-library-item--key
+            background-color: var(--zr-positive-bg)
+            border-radius: 3px
+            color: var(--zr-positive-co)
+            font-weight: 500

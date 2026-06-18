@@ -207,10 +207,11 @@ const Metadata: FC<MetadataProps> = ({ direction = "row", label, children }) => 
 
 type ItemDetailsProps = {
 	closeDialog: () => void,
-	item: ZCleanItemTop
+	item: ZCleanItemTop,
+	onImported?: (item: ZCleanItemTop, pageUID: string) => void
 };
 
-const ItemDetails = memo<ItemDetailsProps>(function ItemDetails({ closeDialog, item }) {
+const ItemDetails = memo<ItemDetailsProps>(function ItemDetails({ closeDialog, item, onImported }) {
 	const {
 		abstract, 
 		authors, 
@@ -246,17 +247,19 @@ const ItemDetails = memo<ItemDetailsProps>(function ItemDetails({ closeDialog, i
 		const outcome = await importItemMetadata({ item: item.raw, pdfs, notes }, inGraph, metadataSettings, typemap, notesSettings, annotationsSettings);
 		if(outcome.success){
 			updateRoamCitekeys();
+			onImported?.(item, outcome.page.uid);
 		}
 		return outcome;
-	}, [annotationsSettings, children, inGraph, item.raw, metadataSettings, notesSettings, typemap, updateRoamCitekeys]);
+	}, [annotationsSettings, children, inGraph, item, metadataSettings, notesSettings, onImported, typemap, updateRoamCitekeys]);
 
 	const importNotes = useCallback(async () => {
 		const outcome = await importItemNotes({ item: item.raw, notes: children.notes }, inGraph, notesSettings, annotationsSettings);
 		if(outcome.success){
 			updateRoamCitekeys();
+			onImported?.(item, outcome.page.uid);
 		}
 		return outcome;
-	}, [annotationsSettings, children.notes, inGraph, item, notesSettings, updateRoamCitekeys]);
+	}, [annotationsSettings, children.notes, inGraph, item, notesSettings, onImported, updateRoamCitekeys]);
 	
 	const navigateToPage = useCallback(() => {
 		if(inGraph != false){

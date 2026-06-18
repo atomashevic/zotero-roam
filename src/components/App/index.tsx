@@ -4,9 +4,8 @@ import { HotkeyConfig, HotkeysTarget2, UseHotkeysOptions } from "@blueprintjs/co
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 
-import Dashboard from "Components/Dashboard";
 import ExtensionIcon from "Components/ExtensionIcon";
-import GraphWatcher from "Components/GraphWatcher";
+import { LibraryStoreProvider } from "Components/LibraryStore";
 import Logger from "Components/Logger";
 import { RoamCitekeysProvider } from "Components/RoamCitekeysContext";
 import SearchPanel from "Components/SearchPanel";
@@ -21,7 +20,6 @@ import { ExtensionContextValue, ExtensionStatusEnum, SettingsOther, SettingsShor
 
 
 const openSearchCommand = "zoteroRoam : Open Search Panel";
-const openDashboardCommand = "zoteroRoam : Open Dashboard";
 
 const ExtensionContext = createContext<ExtensionContextValue | null>(null);
 
@@ -110,7 +108,6 @@ type AppProps = {
 };
 
 type AppState = {
-	isDashboardOpen: boolean,
 	isLoggerOpen: boolean,
 	isSearchPanelOpen: boolean,
 	isSettingsPanelOpen: boolean,
@@ -122,7 +119,6 @@ class App extends Component<AppProps, AppState> {
 	constructor(props){
 		super(props);
 		this.state = {
-			isDashboardOpen: false,
 			isLoggerOpen: false,
 			isSearchPanelOpen: false,
 			isSettingsPanelOpen: false,
@@ -139,9 +135,6 @@ class App extends Component<AppProps, AppState> {
 		this.closeSearchPanel = this.closeSearchPanel.bind(this);
 		this.openSearchPanel = this.openSearchPanel.bind(this);
 		this.toggleSearchPanel = this.toggleSearchPanel.bind(this);
-		this.closeDashboard = this.closeDashboard.bind(this);
-		this.openDashboard = this.openDashboard.bind(this);
-		this.toggleDashboard = this.toggleDashboard.bind(this);
 		this.closeSettings = this.closeSettings.bind(this);
 		this.openSettings = this.openSettings.bind(this);
 		this.toggleSettings = this.toggleSettings.bind(this);
@@ -151,7 +144,6 @@ class App extends Component<AppProps, AppState> {
 
 	componentDidMount(){
 		addPaletteCommand(openSearchCommand, this.openSearchPanel, this.props.extensionAPI);
-		addPaletteCommand(openDashboardCommand, this.openDashboard, this.props.extensionAPI);
 	}
 
 	componentDidUpdate(prevProps){
@@ -172,11 +164,10 @@ class App extends Component<AppProps, AppState> {
 
 	componentWillUnmount(){
 		removePaletteCommand(openSearchCommand, this.props.extensionAPI);
-		removePaletteCommand(openDashboardCommand, this.props.extensionAPI);
 	}
 
 	render() {
-		const { status, isDashboardOpen, isLoggerOpen, isSearchPanelOpen, isSettingsPanelOpen } = this.state;
+		const { status, isLoggerOpen, isSearchPanelOpen, isSettingsPanelOpen } = this.state;
 		const { extension, idbDatabase } = this.props;
 
 		const hotkeys = Object.keys(this.shortcutsConfig)
@@ -198,21 +189,20 @@ class App extends Component<AppProps, AppState> {
 			<HotkeysTarget2 hotkeys={hotkeys} options={this.hotkeysOptions}>
 				<ExtensionContext.Provider value={extension}>
 					<QCProvider idbDatabase={idbDatabase}>
-						<ExtensionIcon
-							openDashboard={this.openDashboard}
-							openLogger={this.openLogger}
-							openSearchPanel={this.openSearchPanel}
-							openSettingsPanel={this.openSettings}
-							status={status} 
-							toggleExtension={this.toggleExtension} />
-						<RoamCitekeysProvider>
-							{status == ExtensionStatusEnum.ON ? <GraphWatcher /> : null}
-							<SearchPanel
-								isOpen={isSearchPanelOpen}
-								onClose={this.closeSearchPanel}
-								status={status} />
-							<Dashboard isOpen={isDashboardOpen} onClose={this.closeDashboard} />
-						</RoamCitekeysProvider>
+						<LibraryStoreProvider enabled={status == ExtensionStatusEnum.ON}>
+							<ExtensionIcon
+								openLogger={this.openLogger}
+								openSearchPanel={this.openSearchPanel}
+								openSettingsPanel={this.openSettings}
+								status={status} 
+								toggleExtension={this.toggleExtension} />
+							<RoamCitekeysProvider>
+								<SearchPanel
+									isOpen={isSearchPanelOpen}
+									onClose={this.closeSearchPanel}
+									status={status} />
+							</RoamCitekeysProvider>
+						</LibraryStoreProvider>
 					</QCProvider>
 					<Logger isOpen={isLoggerOpen} onClose={this.closeLogger} />
 					<SettingsDialog isOpen={isSettingsPanelOpen} onClose={this.closeSettings} />
@@ -222,10 +212,6 @@ class App extends Component<AppProps, AppState> {
 	}
 
 	shortcutsConfig: Record<string, Omit<HotkeyConfig, "combo">> = {
-		"toggleDashboard": {
-			label: "Show/hide the dashboard",
-			onKeyDown: () => this.toggleDashboard()
-		},
 		"toggleSearchPanel": {
 			label: "Show/hide the search panel",
 			onKeyDown: () => this.toggleSearchPanel()
@@ -270,20 +256,6 @@ class App extends Component<AppProps, AppState> {
 	toggleSearchPanel() {
 		if (this.state.status == ExtensionStatusEnum.ON){
 			this.setState((prev) => ({ isSearchPanelOpen: !prev.isSearchPanelOpen }));
-		}
-	}
-
-	closeDashboard() {
-		this.setState((_prev) => ({ isDashboardOpen: false }));
-	}
-
-	openDashboard() {
-		this.setState((_prev) => ({ isDashboardOpen: true }));
-	}
-
-	toggleDashboard(){
-		if (this.state.status == ExtensionStatusEnum.ON){
-			this.setState((prev) => ({ isDashboardOpen: !prev.isDashboardOpen }));
 		}
 	}
 
