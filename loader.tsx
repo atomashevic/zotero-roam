@@ -17,6 +17,35 @@ import { EXTENSION_PORTAL_ID, EXTENSION_SLOT_ID, EXTENSION_VERSION } from "./src
 import "@blueprintjs/popover2/lib/css/blueprint-popover2.css";
 import "./styles/_index.sass";
 
+const DEPOT_CSS_ID = "zotero-roam-depot-css";
+
+function getDepotStylesheetURL() {
+	const currentScript = document.currentScript as HTMLScriptElement | null;
+	const scriptURL = currentScript?.src || Array
+		.from(document.scripts)
+		.map(script => script.src)
+		.reverse()
+		.find(src => src.includes("extension.js"));
+
+	return scriptURL
+		? new URL("extension.css", scriptURL).toString()
+		: "extension.css";
+}
+
+function loadDepotStylesheet() {
+	if (document.getElementById(DEPOT_CSS_ID)) return;
+
+	const stylesheet = document.createElement("link");
+	stylesheet.id = DEPOT_CSS_ID;
+	stylesheet.rel = "stylesheet";
+	stylesheet.href = getDepotStylesheetURL();
+	document.head.appendChild(stylesheet);
+}
+
+function unloadDepotStylesheet() {
+	document.getElementById(DEPOT_CSS_ID)?.remove();
+}
+
 
 /** @constant {ExtensionSettingsConfig} */
 const panelConfig = {
@@ -41,6 +70,7 @@ function onload({ extensionAPI }){
 
 	const INSTALL_CONTEXT = "roam/depot";
 
+	loadDepotStylesheet();
 	setupPortals();
 
 	const { requests, settings } = initialize({ context: INSTALL_CONTEXT, extensionAPI });
@@ -78,6 +108,7 @@ function offload(){
 	clearDefaultHooks();
 	unregisterSmartblockCommands();
 	unmountExtensionIfExists();
+	unloadDepotStylesheet();
 	window.zoteroRoam.deleteDatabase();
 	// @ts-ignore
 	delete window.zoteroRoam;
