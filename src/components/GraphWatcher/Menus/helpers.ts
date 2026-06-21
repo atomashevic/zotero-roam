@@ -1,6 +1,6 @@
 import { SemanticScholarAPI } from "@clients/semantic";
 
-import { identifyChildren, parseDOI } from "../../../utils";
+import { getRoamPageForZoteroItem, identifyChildren, parseDOI } from "../../../utils";
 
 import { AsBoolean } from "Types/helpers";
 import { isSBacklink, RCitekeyPages, SCleanItem, SEnrichedItem, SEnrichedItemCitation, SEnrichedItemReference, SEnrichedItemTypeEnum, SRelatedEntries, ZItemTop, ZLibraryContents } from "Types/transforms";
@@ -171,7 +171,7 @@ function matchSemanticEntry(
 
 			return {
 				...cleanItem,
-				inGraph: roamCitekeys.get("@" + libItem.key) || false,
+				inGraph: getRoamPageForZoteroItem(libItem, roamCitekeys),
 				inLibrary: {
 					children,
 					raw: libItem

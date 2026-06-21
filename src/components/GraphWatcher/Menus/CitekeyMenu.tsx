@@ -251,7 +251,7 @@ const CitekeyMenu = memo<CitekeyMenuProps>(function CitekeyMenu({ item, itemList
 	const [roamCitekeys/*, updateCitekeys */] = useRoamCitekeys();
 
 	const doi = parseDOI(item.data.DOI);
-	const pageUID = findRoamPage("@" + item.key);
+	const pageUID = findRoamPage("@" + item.key) || findRoamPage("@" + item.data.key);
 
 	const children = useMemo(() => {
 		const itemKey = item.data.key;

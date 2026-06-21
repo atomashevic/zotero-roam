@@ -171,8 +171,56 @@ async function fetchBibEntries(
 		.join("\n");
 }
 
+const BETTER_BIBTEX_RPC_URL = "http://localhost:23119/better-bibtex/json-rpc";
+
+/** Retrieves current Better BibTeX citation keys from Zotero Desktop, when available. */
+async function fetchBetterBibTeXCitationKeys(items: ZItem[]): Promise<Map<string, string>> {
+	const citationKeys = new Map<string, string>();
+	const topItems = items.filter(item => !["annotation", "attachment", "note"].includes(item.data.itemType));
+	const itemKeyAliases = new Map<string, string>();
+	const itemKeys = topItems.map(item => {
+		const itemKey = item.data.key;
+		const rpcKey = item.library.type == "user"
+			? itemKey
+			: `${item.library.id}:${itemKey}`;
+		itemKeyAliases.set(rpcKey, itemKey);
+		itemKeyAliases.set(itemKey, itemKey);
+		return rpcKey;
+	});
+
+	if (itemKeys.length == 0) {
+		return citationKeys;
+	}
+
+	try {
+		const response = await fetch(BETTER_BIBTEX_RPC_URL, {
+			method: "POST",
+			headers: {
+				"Accept": "application/json",
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				method: "item.citationkey",
+				params: [itemKeys]
+			})
+		});
+		const data = await response.json() as { result?: Record<string, string> };
+		Object.entries(data.result || {}).forEach(([key, citationKey]) => {
+			const itemKey = itemKeyAliases.get(key);
+			if (itemKey && citationKey) {
+				citationKeys.set(itemKey, citationKey);
+			}
+		});
+	} catch (_error) {
+		return citationKeys;
+	}
+
+	return citationKeys;
+}
+
 /** Retrieves current BibLaTeX citation keys for Zotero items. */
-async function fetchItemCitationKeys(
+async function fetchBibLaTeXCitationKeys(
 	itemKeys: string[],
 	library: ZLibrary
 ): Promise<Map<string, string>> {
@@ -216,7 +264,9 @@ async function refreshItemCitationKeys(items: ZItem[], library: ZLibrary): Promi
 	const itemKeys = items
 		.filter(item => !["annotation", "attachment", "note"].includes(item.data.itemType))
 		.map(item => item.data.key);
-	const citekeys = await fetchItemCitationKeys(itemKeys, library);
+	const citekeys = await fetchBibLaTeXCitationKeys(itemKeys, library);
+	const betterBibTeXCitekeys = await fetchBetterBibTeXCitationKeys(items);
+	betterBibTeXCitekeys.forEach((citekey, itemKey) => citekeys.set(itemKey, citekey));
 	return extractCitekeys(items, citekeys) as ZItem[];
 }
 
@@ -560,9 +610,10 @@ export {
 	fetchAdditionalData,
 	fetchBibEntries,
 	fetchBibliography,
+	fetchBetterBibTeXCitationKeys,
+	fetchBibLaTeXCitationKeys,
 	fetchCollections,
 	fetchDeleted,
-	fetchItemCitationKeys,
 	fetchItems,
 	fetchPermissions,
 	fetchTags,

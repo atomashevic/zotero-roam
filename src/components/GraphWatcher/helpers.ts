@@ -1,4 +1,4 @@
-import { identifyChildren, makeTimestamp } from "../../utils";
+import { getRoamPageForZoteroItem, identifyChildren, makeTimestamp } from "../../utils";
 
 import { AsBoolean } from "Types/helpers";
 import { RCitekeyPages, SCleanRelatedItem, ZItemAnnotation, ZItemAttachment, ZItemNote, ZItemTop } from "Types/transforms";
@@ -27,7 +27,7 @@ function cleanRelatedItem(
 		abstract: item.data.abstractNote || "",
 		added: item.data.dateAdded,
 		children,
-		inGraph: roamCitekeys.get("@" + item.key) || false,
+		inGraph: getRoamPageForZoteroItem(item, roamCitekeys),
 		itemType: item.data.itemType,
 		key: item.key,
 		location,

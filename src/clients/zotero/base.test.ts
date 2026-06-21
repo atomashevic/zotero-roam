@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { vi } from "vitest";
 
 import * as base from "./base";
 import { makeTagList } from "./helpers";
@@ -9,10 +10,18 @@ import { apiKeys, bibs, deletions, findBibliographyEntry, findBibEntry, findColl
 import { isFulfilled } from "Types/helpers";
 
 
-const { deleteTags, fetchAdditionalData, fetchBibEntries, fetchBibliography, fetchCollections, fetchDeleted, fetchItemCitationKeys, fetchItems, fetchPermissions, fetchTags, refreshItemCitationKeys, writeItems } = base;
+const { deleteTags, fetchAdditionalData, fetchBibEntries, fetchBibliography, fetchBetterBibTeXCitationKeys, fetchBibLaTeXCitationKeys, fetchCollections, fetchDeleted, fetchItems, fetchPermissions, fetchTags, refreshItemCitationKeys, writeItems } = base;
 
 const { keyWithFullAccess: { key: masterKey } } = apiKeys;
 const { userLibrary } = libraries;
+
+beforeEach(() => {
+	vi.spyOn(global, "fetch").mockRejectedValue(new Error("No local Better BibTeX API"));
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 const getLibraryPath = (library) => {
 	return library.type + "s/" + library.id;
@@ -64,15 +73,37 @@ describe("Fetching mocked bibliography entries", () => {
 });
 
 describe("Fetching mocked citation keys", () => {
-	test("Better BibTeX citation keys are keyed by Zotero item key", async () => {
+	test("BibLaTeX citation keys are keyed by Zotero item key", async () => {
 		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
-		const citekeys = await fetchItemCitationKeys([sample_item.data.key], { apikey: masterKey, path: userLibrary.path });
+		const citekeys = await fetchBibLaTeXCitationKeys([sample_item.data.key], { apikey: masterKey, path: userLibrary.path });
 
 		expect(citekeys.get(sample_item.data.key)).toBe(sample_item.key);
 	});
 
+	test("Better BibTeX local citation keys are keyed by Zotero item key", async () => {
+		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
+		vi.mocked(global.fetch).mockResolvedValueOnce({
+			json: async () => ({
+				result: {
+					[sample_item.data.key]: "betterBibTeXLocalKey"
+				}
+			})
+		} as Response);
+
+		const citekeys = await fetchBetterBibTeXCitationKeys([sample_item]);
+
+		expect(citekeys.get(sample_item.data.key)).toBe("betterBibTeXLocalKey");
+	});
+
 	test("Refreshing cached items updates stale citation keys", async () => {
 		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
+		vi.mocked(global.fetch).mockResolvedValueOnce({
+			json: async () => ({
+				result: {
+					[sample_item.data.key]: "betterBibTeXLocalKey"
+				}
+			})
+		} as Response);
 		const stale_item = {
 			...sample_item,
 			key: "staleCitekey",
@@ -81,7 +112,7 @@ describe("Fetching mocked citation keys", () => {
 
 		const refreshed = await refreshItemCitationKeys([stale_item], { apikey: masterKey, path: userLibrary.path });
 
-		expect(refreshed[0].key).toBe(sample_item.key);
+		expect(refreshed[0].key).toBe("betterBibTeXLocalKey");
 		expect(refreshed[0].has_citekey).toBe(true);
 	});
 });

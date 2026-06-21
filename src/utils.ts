@@ -113,6 +113,7 @@ function cleanLibraryItem(item: ZItemTop, pdfs: ZItemAttachment[] = [], notes: (
 			? ""
 			: (new Date(item.meta.parsedDate)).getUTCFullYear().toString();
 	const pub_year = maybeYear ? `(${maybeYear})` : "";
+	const inGraph = getRoamPageForZoteroItem(item, roamCitekeys);
 
 	const clean_item = {
 		abstract: item.data.abstractNote || "",
@@ -125,7 +126,7 @@ function cleanLibraryItem(item: ZItemTop, pdfs: ZItemAttachment[] = [], notes: (
 			notes
 		},
 		createdByUser: item.meta.createdByUser?.username || null,
-		inGraph: roamCitekeys.get("@" + item.key) || false as const,
+		inGraph,
 		itemKey: item.data.key,
 		itemType: item.data.itemType,
 		key: item.key,
@@ -154,6 +155,13 @@ function cleanLibraryItem(item: ZItemTop, pdfs: ZItemAttachment[] = [], notes: (
 	].filter(AsBoolean).join(" ");
 
 	return clean_item;
+}
+
+/** Finds an item's Roam page by current citation key, falling back to Zotero item key pages created before citation keys were refreshed. */
+function getRoamPageForZoteroItem(item: Pick<ZItemTop, "data" | "key">, roamCitekeys: RCitekeyPages): string | false {
+	return roamCitekeys.get("@" + item.key)
+		|| roamCitekeys.get("@" + item.data.key)
+		|| false;
 }
 
 /** Removes newlines at the beginning and end of a string */
@@ -905,6 +913,7 @@ export {
 	formatItemNotes,
 	formatItemReference,
 	formatZoteroNotes,
+	getRoamPageForZoteroItem,
 	getPDFLink,
 	getLocalLink,
 	getWebLink,

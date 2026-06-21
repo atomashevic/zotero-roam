@@ -19,6 +19,19 @@ describe("LibraryStore indexing", () => {
 			.toContain("basic income");
 	});
 
+	it("matches old Zotero-key Roam pages after citation keys refresh", () => {
+		const refreshedItems = items.map(item => item.data.key == "D53X926C"
+			? { ...item, key: "betterBibTeXKey" }
+			: item);
+		const records = buildLibraryRecords(refreshedItems, new Map([
+			["@D53X926C", "old-zotero-key-page-uid"]
+		]));
+		const index = buildLibraryIndex(records);
+
+		expect(index.byCitekey.get("@betterBibTeXKey")?.pageUID)
+			.toBe("old-zotero-key-page-uid");
+	});
+
 	it("searches the local index across title, author, citekey, DOI, tags, and abstract", () => {
 		const index = buildLibraryIndex(buildLibraryRecords(items, new Map()));
 

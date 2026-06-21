@@ -224,6 +224,34 @@ function findRoamPage(
 	}
 }
 
+/** Searches a Roam page title by UID. */
+function findRoamPageTitle(
+	/** The UID of the page to search */
+	uid: string
+) {
+	const pageSearch = window.roamAlphaAPI.data.q<[[string]?]>(`[
+		:find ?title
+		:in $ ?uid
+		:where
+			[?p :block/uid ?uid]
+			[?p :node/title ?title]
+		]`, uid);
+	if (pageSearch[0]) {
+		return pageSearch[0][0];
+	} else {
+		return false;
+	}
+}
+
+/** Renames an existing item page to the current citekey title when there is no title collision. */
+async function updateItemPageTitle(pageUID: string, title: string) {
+	const currentTitle = findRoamPageTitle(pageUID);
+	const existingTargetPage = findRoamPage(title);
+	if (currentTitle && currentTitle != title && !existingTargetPage) {
+		await window.roamAlphaAPI.data.page.update({ page: { uid: pageUID, title } });
+	}
+}
+
 /** Retrieves the full list of Roam pages, sorted in alphabetical order
  * @returns The array of all page titles, sorted from A-Z
  */
@@ -332,10 +360,12 @@ async function importItemMetadata(
 	const title = "@" + item.key;
 	const pageUID = uid || window.roamAlphaAPI.util.generateUID();
 	const page = { new: false, title, uid: pageUID };
-	
+
 	if(pageUID != uid){
-		window.roamAlphaAPI.data.page.create({ page: { title, "uid": pageUID } });
+		await window.roamAlphaAPI.data.page.create({ page: { title, "uid": pageUID } });
 		page.new = true;
+	} else {
+		await updateItemPageTitle(pageUID, title);
 	}
 	
 	const { use = "default", func = "", smartblock: { param, paramValue } } = metadataSettings;
@@ -392,8 +422,10 @@ async function importItemNotes(
 	const page = { new: false, title, uid: pageUID };
 
 	if(pageUID != uid){
-		window.roamAlphaAPI.data.page.create({ page: { title, "uid": pageUID } });
+		await window.roamAlphaAPI.data.page.create({ page: { title, "uid": pageUID } });
 		page.new = true;
+	} else {
+		await updateItemPageTitle(pageUID, title);
 	}
 
 	try {

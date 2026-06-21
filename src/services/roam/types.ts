@@ -74,6 +74,14 @@ export namespace Roam {
 						"children-view-type"?: ViewType
 					}
 				}) => Promise<void | null | undefined>,
+				update: (args: {
+					page: {
+						/** The UID for the page */
+						uid: string,
+						/** The updated title for the page */
+						title: string
+					}
+				}) => Promise<void | null | undefined>,
 			},
 
 			/** Runs a Datalog query against the graph.
