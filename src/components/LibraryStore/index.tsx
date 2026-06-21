@@ -72,12 +72,17 @@ const LibraryStoreProvider: FC<LibraryStoreProviderProps> = ({ children, enabled
 	const status = useMemo(() => getSyncStatus(itemQueries, enabled), [enabled, itemQueries]);
 
 	const refresh = useCallback(() => {
+		queryClient.removeQueries({ queryKey: ["items"], exact: false, type: "inactive" });
+		queryClient.setQueriesData<Queries.Data.Items>(
+			{ queryKey: ["items"], exact: false },
+			{ data: [], lastUpdated: 0 }
+		);
 		dataRequests.forEach(req => {
 			const { apikey: _apikey, library: { path }, ...identifiers } = req;
 			const queryKey: Queries.Key.Items = ["items", path, { ...identifiers }];
 			queryClient.setQueryData<Queries.Data.Items>(queryKey, { data: [], lastUpdated: 0 });
 		});
-		itemQueries.forEach(q => q.refetch());
+		itemQueries.forEach(q => void q.refetch());
 		setRoamCitekeys(getCitekeyPages());
 	}, [dataRequests, itemQueries, queryClient]);
 

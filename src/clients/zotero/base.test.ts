@@ -83,6 +83,7 @@ describe("Fetching mocked citation keys", () => {
 	test("Better BibTeX local citation keys are keyed by Zotero item key", async () => {
 		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
 		vi.mocked(global.fetch).mockResolvedValueOnce({
+			ok: true,
 			json: async () => ({
 				result: {
 					[sample_item.data.key]: "betterBibTeXLocalKey"
@@ -98,6 +99,7 @@ describe("Fetching mocked citation keys", () => {
 	test("Refreshing cached items updates stale citation keys", async () => {
 		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
 		vi.mocked(global.fetch).mockResolvedValueOnce({
+			ok: true,
 			json: async () => ({
 				result: {
 					[sample_item.data.key]: "betterBibTeXLocalKey"

@@ -46,6 +46,7 @@ const queryClient = new QueryClient({
 	}
 });
 
+const QUERY_CACHE_BUSTER = "v1.1-citekeys";
 
 type QCProviderProps = {
 	idbDatabase: IDBDatabase
@@ -62,7 +63,7 @@ const QCProvider: FC<QCProviderProps> = ({ children, idbDatabase }) => {
 			});
 		},
 		persistOptions: {
-			buster: "v1.0",
+			buster: QUERY_CACHE_BUSTER,
 			dehydrateOptions: {
 				shouldDehydrateQuery: shouldQueryBePersisted
 			},

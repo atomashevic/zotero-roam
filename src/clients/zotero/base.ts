@@ -205,14 +205,29 @@ async function fetchBetterBibTeXCitationKeys(items: ZItem[]): Promise<Map<string
 				params: [itemKeys]
 			})
 		});
-		const data = await response.json() as { result?: Record<string, string> };
+		if (!response.ok) {
+			throw new Error(`Better BibTeX JSON-RPC returned ${response.status}`);
+		}
+		const data = await response.json() as { error?: { message?: string }, result?: Record<string, string> };
+		if (data.error) {
+			throw new Error(data.error.message || "Better BibTeX JSON-RPC failed");
+		}
 		Object.entries(data.result || {}).forEach(([key, citationKey]) => {
 			const itemKey = itemKeyAliases.get(key);
 			if (itemKey && citationKey) {
 				citationKeys.set(itemKey, citationKey);
 			}
 		});
-	} catch (_error) {
+	} catch (error) {
+		window.zoteroRoam?.warn?.({
+			origin: "API",
+			message: "Failed to fetch Better BibTeX citation keys",
+			detail: "Zotero Desktop must be open and Better BibTeX JSON-RPC must be enabled for local citation keys.",
+			context: {
+				error: cleanError(error),
+				url: BETTER_BIBTEX_RPC_URL
+			}
+		});
 		return citationKeys;
 	}
 
