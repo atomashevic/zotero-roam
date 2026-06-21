@@ -67,19 +67,34 @@ function categorizeZoteroTags(z_data: string[], tagMap: ZTagMap): ZTagEntry[] {
 
 type WithHasCitekey<T> = T & { has_citekey: boolean };
 
+function getPinnedCitekey(extra?: string) {
+	if (typeof (extra) !== "undefined") {
+		if (extra.includes("Citation Key: ")) {
+			return extra.match("Citation Key: (.+)")?.[1];
+		}
+	}
+}
+
 /** Extracts pinned citekeys from a dataset
  * @param arr - The items to scan
+ * @param citekeys - The current citekeys by Zotero item key, when available
  * @returns The processed dataset : each item gains a `has_citekey` property, and its `key` property is assigned its citekey 
  */
-function extractCitekeys<T extends { key: string, data: { extra?: string } }>(arr: T[]): WithHasCitekey<T>[] {
+function extractCitekeys<T extends { key: string, data: { key?: string, extra?: string } }>(arr: T[], citekeys = new Map<string, string>()): WithHasCitekey<T>[] {
 	const itemList = [...arr];
 	return itemList.map(item => {
 		let { key } = item;
 		let has_citekey = false;
+		const zoteroKey = item.data.key || item.key;
+		const betterBibTeXCitekey = citekeys.get(zoteroKey);
 
-		if (typeof (item.data.extra) !== "undefined") {
-			if (item.data.extra.includes("Citation Key: ")) {
-				key = item.data.extra.match("Citation Key: (.+)")?.[1] || key;
+		if (betterBibTeXCitekey) {
+			key = betterBibTeXCitekey;
+			has_citekey = true;
+		} else {
+			const pinnedCitekey = getPinnedCitekey(item.data.extra);
+			if (pinnedCitekey) {
+				key = pinnedCitekey;
 				has_citekey = true;
 			}
 		}
@@ -130,12 +145,12 @@ function makeTagMap(tags: ZoteroAPI.Tag[]) {
 function matchWithCurrentData<T extends { data: { key: string, extra?: string }, key: string }>(
 	update: { modified?: T[], deleted?: string[] },
 	arr: T[] = [],
-	{ with_citekey = false } = {}
+	{ citekeys = new Map<string, string>(), with_citekey = false } = {}
 ) {
 	const { modified = [], deleted = [] } = update;
 	// If the data has citekeys, transform before pushing
 	const modifiedData = with_citekey
-		? extractCitekeys([...modified])
+		? extractCitekeys([...modified], citekeys)
 		: [...modified];
 	const deletedData = [...deleted];
 
@@ -161,6 +176,11 @@ function matchWithCurrentData<T extends { data: { key: string, extra?: string },
 		});
 		return datastore;
 	}
+}
+
+/** Parses the citation key from a BibLaTeX entry. */
+function parseBibLaTeXCitekey(biblatex: string) {
+	return biblatex.match(/^\s*@[^{]+\{\s*([^,\s]+)\s*,/m)?.[1];
 }
 
 
@@ -212,6 +232,7 @@ export {
 	makeTagList,
 	makeTagMap,
 	matchWithCurrentData,
+	parseBibLaTeXCitekey,
 	updateTagMap,
 	wrappedFetchItems
 };

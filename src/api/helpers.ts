@@ -7,6 +7,41 @@ import { SettingsAnnotations, SettingsNotes, SettingsTypemap } from "Types/exten
 import { AsBoolean } from "Types/helpers";
 import { RImportableElement, ZItem, ZItemAnnotation, ZItemAttachment, ZItemNote, ZItemTop, ZLinkType, ZLinkOptions, isZAnnotation, isZNote } from "Types/transforms";
 
+const ARXIV_ID_PATTERN = /(?:arxiv[:.\s/]+)?((?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?\/\d{7})(?:v\d+)?)/i;
+
+function cleanArXivID(value: string) {
+	return value.trim().replace(/[.)\],;]+$/, "");
+}
+
+function extractArXivID(item: ZItemTop) {
+	const { archiveID, DOI, extra, url } = item.data;
+	const candidates = [
+		archiveID,
+		url,
+		DOI,
+		extra
+	].filter((candidate): candidate is string => typeof candidate == "string" && Boolean(candidate));
+
+	for (const candidate of candidates) {
+		const match = candidate.match(ARXIV_ID_PATTERN)?.[1];
+		if (match) {
+			return cleanArXivID(match);
+		}
+	}
+	return null;
+}
+
+function getAlphaXivLinks(item: ZItemTop) {
+	const arxivID = extractArXivID(item);
+	if (!arxivID) {
+		return null;
+	}
+	return {
+		paper: `https://www.alphaxiv.org/abs/${arxivID}`,
+		overview: `https://www.alphaxiv.org/overview/${arxivID}`
+	};
+}
+
 
 /** Parses the XHTML bibliography for a Zotero item into Roam formatting
  * @param bib - The item's XHTML bibliography
@@ -62,6 +97,8 @@ function formatItemMetadata(
 	if (item.data.itemType) { metadata.push(`Type:: ${getItemType(item, { brackets: true }, { typemap })}`); } // Item type, according to typemap
 	metadata.push(`Publication:: ${getItemPublication(item, { brackets: true })}`);
 	if (item.data.url) { metadata.push(`URL : ${item.data.url}`); }
+	const alphaXivLinks = getAlphaXivLinks(item);
+	if (alphaXivLinks) { metadata.push(`AlphaXiv links:: [Paper](${alphaXivLinks.paper}), [Overview](${alphaXivLinks.overview})`); }
 	if (item.data.dateAdded) { metadata.push(`Date Added:: ${getItemDateAdded(item)}`); } // Date added, as Daily Notes Page reference
 	metadata.push(`Zotero links:: ${getItemLink(item, "local", { format: "markdown", text: "Local library" })}, ${getItemLink(item, "web", { format: "markdown", text: "Web library" })}`); // Local + Web links to the item
 	if (item.data.tags.length > 0) { metadata.push(`Tags:: ${getItemTags(item, { return_as: "string", brackets: true })}`); } // Tags, if any
@@ -302,6 +339,7 @@ export {
 	formatNotes,
 	formatPDFs,
 	formatZoteroAnnotations,
+	getAlphaXivLinks,
 	getItemCreators,
 	getItemDateAdded,
 	getItemLink,

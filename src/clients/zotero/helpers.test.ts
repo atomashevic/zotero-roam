@@ -7,7 +7,7 @@ vi.mock("./base");
 import { fetchItems } from "./base";
 import { ZoteroAPI } from "./types";
 
-import { areTagsDuplicate, extractCitekeys, makeTagList, matchWithCurrentData, updateTagMap, wrappedFetchItems } from "./helpers";
+import { areTagsDuplicate, extractCitekeys, makeTagList, matchWithCurrentData, parseBibLaTeXCitekey, updateTagMap, wrappedFetchItems } from "./helpers";
 
 import { apiKeys, findTags, items, libraries, tags } from "Mocks";
 import { DataRequest } from "Types/extension";
@@ -33,6 +33,27 @@ test("Extracting citekeys for Zotero items", () => {
 	expect(extractCitekeys(cases)).toEqual(expectations);
 	expect(extractCitekeys(items)).toEqual(items);
 
+});
+
+test("Better BibTeX citekeys have priority over pinned extra citekeys", () => {
+	const cases = [
+		{ key: "ABCD1234", data: { key: "ABCD1234", extra: "Citation Key: oldCitekey1994" } },
+		{ key: "PQRST789", data: { key: "PQRST789", extra: "" } }
+	];
+	const citekeys = new Map([
+		["ABCD1234", "newCitekey1994"],
+		["PQRST789", "generatedCitekey2001"]
+	]);
+
+	expect(extractCitekeys(cases, citekeys)).toEqual([
+		{ key: "newCitekey1994", data: { key: "ABCD1234", extra: "Citation Key: oldCitekey1994" }, has_citekey: true },
+		{ key: "generatedCitekey2001", data: { key: "PQRST789", extra: "" }, has_citekey: true }
+	]);
+});
+
+test("Parsing BibLaTeX citekeys", () => {
+	expect(parseBibLaTeXCitekey("\n@article{newCitekey1994,\n\ttitle = {A title},\n}")).toBe("newCitekey1994");
+	expect(parseBibLaTeXCitekey("invalid")).toBeUndefined();
 });
 
 describe("Comparing tag entries", () => {

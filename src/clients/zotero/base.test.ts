@@ -9,9 +9,10 @@ import { apiKeys, bibs, deletions, findBibliographyEntry, findBibEntry, findColl
 import { isFulfilled } from "Types/helpers";
 
 
-const { deleteTags, fetchAdditionalData, fetchBibEntries, fetchBibliography, fetchCollections, fetchDeleted, fetchItems, fetchPermissions, fetchTags, writeItems } = base;
+const { deleteTags, fetchAdditionalData, fetchBibEntries, fetchBibliography, fetchCollections, fetchDeleted, fetchItemCitationKeys, fetchItems, fetchPermissions, fetchTags, refreshItemCitationKeys, writeItems } = base;
 
 const { keyWithFullAccess: { key: masterKey } } = apiKeys;
+const { userLibrary } = libraries;
 
 const getLibraryPath = (library) => {
 	return library.type + "s/" + library.id;
@@ -60,6 +61,29 @@ describe("Fetching mocked bibliography entries", () => {
 			expect(res).toBe(sample_bib.biblatex);
 		}
 	);
+});
+
+describe("Fetching mocked citation keys", () => {
+	test("Better BibTeX citation keys are keyed by Zotero item key", async () => {
+		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
+		const citekeys = await fetchItemCitationKeys([sample_item.data.key], { apikey: masterKey, path: userLibrary.path });
+
+		expect(citekeys.get(sample_item.data.key)).toBe(sample_item.key);
+	});
+
+	test("Refreshing cached items updates stale citation keys", async () => {
+		const sample_item = findItems({ type: userLibrary.type, id: userLibrary.id, since: 0 })[0];
+		const stale_item = {
+			...sample_item,
+			key: "staleCitekey",
+			has_citekey: true
+		};
+
+		const refreshed = await refreshItemCitationKeys([stale_item], { apikey: masterKey, path: userLibrary.path });
+
+		expect(refreshed[0].key).toBe(sample_item.key);
+		expect(refreshed[0].has_citekey).toBe(true);
+	});
 });
 
 describe("Fetching mocked collections", () => {

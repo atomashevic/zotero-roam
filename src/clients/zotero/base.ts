@@ -5,7 +5,7 @@ import axiosRetry from "axios-retry";
 import { emitCustomEvent } from "@services/events";
 import { Queries } from "@services/react-query";
 
-import { makeTagList, matchWithCurrentData } from "./helpers";
+import { extractCitekeys, makeTagList, matchWithCurrentData, parseBibLaTeXCitekey } from "./helpers";
 import { ZoteroAPI } from "./types";
 
 import { cleanError } from "../../utils";
@@ -169,6 +169,55 @@ async function fetchBibEntries(
 		.flat(1)
 		.map(entry => entry.biblatex)
 		.join("\n");
+}
+
+/** Retrieves current BibLaTeX citation keys for Zotero items. */
+async function fetchItemCitationKeys(
+	itemKeys: string[],
+	library: ZLibrary
+): Promise<Map<string, string>> {
+	const { apikey, path } = library;
+	const citekeys = new Map<string, string>();
+
+	// * Only 100 entries can be retrieved at once
+	const apiCalls: Promise<AxiosResponse<ZoteroAPI.Responses.ItemsGet<"biblatex">>>[] = [];
+	const nbCalls = Math.ceil(itemKeys.length / 100);
+	for (let i = 1; i <= nbCalls; i++) {
+		const keyList = itemKeys.slice(100 * (i - 1), 100 * i);
+		if (keyList.length == 0) {
+			continue;
+		}
+		apiCalls.push(zoteroClient.get<ZoteroAPI.Responses.ItemsGet<"biblatex">>(`${path}/items`, {
+			headers: {
+				"Zotero-API-Key": apikey
+			},
+			params: {
+				include: "biblatex",
+				itemKey: keyList.join(",")
+			}
+		}));
+	}
+
+	const bibResults = await Promise.all(apiCalls);
+	bibResults
+		.map(res => res.data)
+		.flat(1)
+		.forEach(entry => {
+			const citekey = parseBibLaTeXCitekey(entry.biblatex);
+			if (citekey) {
+				citekeys.set(entry.key, citekey);
+			}
+		});
+
+	return citekeys;
+}
+
+async function refreshItemCitationKeys(items: ZItem[], library: ZLibrary): Promise<ZItem[]> {
+	const itemKeys = items
+		.filter(item => !["annotation", "attachment", "note"].includes(item.data.itemType))
+		.map(item => item.data.key);
+	const citekeys = await fetchItemCitationKeys(itemKeys, library);
+	return extractCitekeys(items, citekeys) as ZItem[];
 }
 
 
@@ -393,8 +442,10 @@ async function fetchItems(
 				});
 			}
 		}
+		const mergedData = matchWithCurrentData({ modified, deleted }, match, { with_citekey: true }) as ZItem[];
+		const refreshedData = await refreshItemCitationKeys(mergedData, { apikey, path });
 		return {
-			data: matchWithCurrentData({ modified, deleted }, match, { with_citekey: true }) as ZItem[],
+			data: refreshedData,
 			lastUpdated: Number(lastUpdated)
 		};
 	} catch (error) {
@@ -511,8 +562,10 @@ export {
 	fetchBibliography,
 	fetchCollections,
 	fetchDeleted,
+	fetchItemCitationKeys,
 	fetchItems,
 	fetchPermissions,
 	fetchTags,
+	refreshItemCitationKeys,
 	writeItems
 };

@@ -1,6 +1,6 @@
 import { mock } from "vitest-mock-extended";
 
-import { cleanBibliographyHTML, compareAnnotationRawIndices, formatNotes, formatZoteroAnnotations, getItemCreators, getItemDateAdded, getItemTags } from "./helpers";
+import { cleanBibliographyHTML, compareAnnotationRawIndices, formatItemMetadata, formatNotes, formatZoteroAnnotations, getAlphaXivLinks, getItemCreators, getItemDateAdded, getItemTags } from "./helpers";
 
 import { setupInitialSettings } from "../setup";
 import { formatZoteroNotes, simplifyZoteroAnnotations } from "../utils";
@@ -12,7 +12,7 @@ import { ZItem, ZItemTop } from "Types/transforms";
 
 
 const simplifiedAnnot = simplifyZoteroAnnotations([sampleAnnot])[0];
-const { annotations: annotationsSettings, notes } = setupInitialSettings({});
+const { annotations: annotationsSettings, notes, typemap } = setupInitialSettings({});
 
 
 describe("cleanBibliographyHTML", () => {
@@ -37,6 +37,48 @@ describe("cleanBibliographyHTML", () => {
 
 		expect(cleanBibliographyHTML(sample_bib_vancouver))
 			.toBe("1. MacDonald K, Fainman-Adelman N, Anderson KK, Iyer SN. Pathways to mental health services for young people: a systematic review. Soc Psychiatry Psychiatr Epidemiol. 2018 Oct;53(10):1005–38.");
+	});
+});
+
+describe("AlphaXiv links", () => {
+	const arxivItem = mock<ZItemTop>({
+		data: {
+			archive: "arXiv",
+			archiveID: "2503.16527v2",
+			creators: [],
+			dateAdded: "2026-06-21T08:00:00Z",
+			extra: "",
+			itemType: "preprint",
+			key: "A12BCDEF",
+			relations: {},
+			tags: [],
+			title: "LLM Generated Persona is a Promise with a Catch",
+			url: "https://arxiv.org/abs/2503.16527"
+		},
+		library: {
+			id: 12345,
+			name: "myname",
+			type: "user"
+		}
+	});
+
+	it("creates AlphaXiv paper and overview links from an arXiv ID", () => {
+		expect(getAlphaXivLinks(arxivItem)).toEqual({
+			paper: "https://www.alphaxiv.org/abs/2503.16527v2",
+			overview: "https://www.alphaxiv.org/overview/2503.16527v2"
+		});
+	});
+
+	it("imports AlphaXiv links in default metadata", () => {
+		expect(formatItemMetadata(arxivItem, [], [], { annotationsSettings, notesSettings: notes, typemap }))
+			.toContain("AlphaXiv links:: [Paper](https://www.alphaxiv.org/abs/2503.16527v2), [Overview](https://www.alphaxiv.org/overview/2503.16527v2)");
+	});
+
+	it("extracts arXiv IDs from DOI and extra fields", () => {
+		expect(getAlphaXivLinks(mock<ZItemTop>({ data: { DOI: "10.48550/arXiv.2503.16527" } }))?.overview)
+			.toBe("https://www.alphaxiv.org/overview/2503.16527");
+		expect(getAlphaXivLinks(mock<ZItemTop>({ data: { extra: "arXiv:2503.16527." } }))?.paper)
+			.toBe("https://www.alphaxiv.org/abs/2503.16527");
 	});
 });
 
