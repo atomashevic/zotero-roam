@@ -1,9 +1,11 @@
 import { FC, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useRequestsSettings } from "Components/UserSettings";
 
 import { useItems } from "@clients/zotero";
 import { getCitekeyPages } from "@services/roam";
+import { Queries } from "@services/react-query";
 
 import { SEARCH_RESULT_LIMIT, LibraryIndex, LibraryRecord, buildLibraryIndex, buildLibraryRecords, searchLibraryIndex } from "./helpers";
 
@@ -50,6 +52,7 @@ type LibraryStoreProviderProps = {
 
 const LibraryStoreProvider: FC<LibraryStoreProviderProps> = ({ children, enabled }) => {
 	const [{ dataRequests }] = useRequestsSettings();
+	const queryClient = useQueryClient();
 	const [roamCitekeys, setRoamCitekeys] = useState<RCitekeyPages>(() => new Map());
 
 	useEffect(() => {
@@ -69,9 +72,14 @@ const LibraryStoreProvider: FC<LibraryStoreProviderProps> = ({ children, enabled
 	const status = useMemo(() => getSyncStatus(itemQueries, enabled), [enabled, itemQueries]);
 
 	const refresh = useCallback(() => {
+		dataRequests.forEach(req => {
+			const { apikey: _apikey, library: { path }, ...identifiers } = req;
+			const queryKey: Queries.Key.Items = ["items", path, { ...identifiers }];
+			queryClient.setQueryData<Queries.Data.Items>(queryKey, { data: [], lastUpdated: 0 });
+		});
 		itemQueries.forEach(q => q.refetch());
 		setRoamCitekeys(getCitekeyPages());
-	}, [itemQueries]);
+	}, [dataRequests, itemQueries, queryClient]);
 
 	const search = useCallback((query: string, limit = SEARCH_RESULT_LIMIT) => {
 		return searchLibraryIndex(index, query, limit);

@@ -35,9 +35,9 @@ test("Extracting citekeys for Zotero items", () => {
 
 });
 
-test("Better BibTeX citekeys have priority over pinned extra citekeys", () => {
+test("Zotero citationKey has priority over refreshed and pinned citekeys", () => {
 	const cases = [
-		{ key: "ABCD1234", data: { key: "ABCD1234", extra: "Citation Key: oldCitekey1994" } },
+		{ key: "ABCD1234", data: { citationKey: "fieldCitekey1994", key: "ABCD1234", extra: "Citation Key: oldCitekey1994" } },
 		{ key: "PQRST789", data: { key: "PQRST789", extra: "" } }
 	];
 	const citekeys = new Map([
@@ -46,7 +46,7 @@ test("Better BibTeX citekeys have priority over pinned extra citekeys", () => {
 	]);
 
 	expect(extractCitekeys(cases, citekeys)).toEqual([
-		{ key: "newCitekey1994", data: { key: "ABCD1234", extra: "Citation Key: oldCitekey1994" }, has_citekey: true },
+		{ key: "fieldCitekey1994", data: { citationKey: "fieldCitekey1994", key: "ABCD1234", extra: "Citation Key: oldCitekey1994" }, has_citekey: true },
 		{ key: "generatedCitekey2001", data: { key: "PQRST789", extra: "" }, has_citekey: true }
 	]);
 });

@@ -80,13 +80,13 @@ function getPinnedCitekey(extra?: string) {
  * @param citekeys - The current citekeys by Zotero item key, when available
  * @returns The processed dataset : each item gains a `has_citekey` property, and its `key` property is assigned its citekey 
  */
-function extractCitekeys<T extends { key: string, data: { key?: string, extra?: string } }>(arr: T[], citekeys = new Map<string, string>()): WithHasCitekey<T>[] {
+function extractCitekeys<T extends { key: string, data: { citationKey?: string, key?: string, extra?: string } }>(arr: T[], citekeys = new Map<string, string>()): WithHasCitekey<T>[] {
 	const itemList = [...arr];
 	return itemList.map(item => {
 		let { key } = item;
 		let has_citekey = false;
 		const zoteroKey = item.data.key || item.key;
-		const betterBibTeXCitekey = citekeys.get(zoteroKey);
+		const betterBibTeXCitekey = item.data.citationKey || citekeys.get(zoteroKey);
 
 		if (betterBibTeXCitekey) {
 			key = betterBibTeXCitekey;
